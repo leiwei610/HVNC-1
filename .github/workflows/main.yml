@@ -6,34 +6,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: microsoft/setup-msbuild@v2
-      
+
       # 1. 强制静态链接编译，把所有依赖打包进exe
       - name: 编译Client（静态链接 Release x64）
-        run: msbuild Client/HVNC.vcxproj `
-          /p:Configuration=Release /p:Platform=x64 `
-          /p:OutDir=${{ github.workspace }}/build_output/Client/ `
-          /p:RuntimeLibrary=MultiThreaded `  # 静态链接 Release
-          /p:LinkIncremental=false `
-          /nologo
-      
+        run: |
+          msbuild Client/HVNC.vcxproj ^
+            /p:Configuration=Release /p:Platform=x64 ^
+            /p:OutDir=${{ github.workspace }}/build_output/Client/ ^
+            /p:RuntimeLibrary=MultiThreaded ^
+            /p:LinkIncremental=false ^
+            /nologo
+
       - name: 编译Server（静态链接 Debug Win32）
-        run: msbuild Server/Server.vcxproj `
-          /p:Configuration=Debug /p:Platform=Win32 `
-          /p:OutDir=${{ github.workspace }}/build_output/Server/ `
-          /p:RuntimeLibrary=MultiThreadedDebug `  # 静态链接 Debug
-          /p:LinkIncremental=false `
-          /nologo
-      
+        run: |
+          msbuild Server/Server.vcxproj ^
+            /p:Configuration=Debug /p:Platform=Win32 ^
+            /p:OutDir=${{ github.workspace }}/build_output/Server/ ^
+            /p:RuntimeLibrary=MultiThreadedDebug ^
+            /p:LinkIncremental=false ^
+            /nologo
+
       # 2. 复制所有输出文件（包括exe、dll、pdb等）
       - name: 复制所有产物到output
         run: |
           New-Item -Path ${{ github.workspace }}/output -ItemType Directory -Force
           Copy-Item -Path ${{ github.workspace }}/build_output/**/* -Destination ${{ github.workspace }}/output/ -Recurse -Force
-      
+
       # 3. 验证文件大小和数量
       - name: 验证output中的文件（含大小）
         run: Get-ChildItem ${{ github.workspace }}/output | Select-Object Name, Length
-      
+
       # 4. 上传完整产物
       - name: 上传output文件夹
         uses: actions/upload-artifact@v4
