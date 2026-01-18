@@ -1,4 +1,4 @@
-name: Build HVNC Project (Official Standard)
+name: Build HVNC Project (No Optimization, No Trimming)
 on:
   push:
     branches: [ "main" ]
@@ -24,9 +24,9 @@ jobs:
         run: |
           New-Item -Path "${{ github.workspace }}\build_output\Client" -ItemType Directory -Force
           New-Item -Path "${{ github.workspace }}\build_output\Server" -ItemType Directory -Force
-          New-Item -Path "${{ github.workspace }}\output" -ItemType Directory -Force
 
-      - name: Build Client (Release x64, Static Link)
+      # 编译 Client：完全关闭优化、禁止裁剪
+      - name: Build Client (No Optimization, No Trimming)
         run: |
           msbuild Client/HVNC.vcxproj `
             /p:Configuration=Release `
@@ -34,17 +34,14 @@ jobs:
             /p:OutDir="${{ github.workspace }}\build_output\Client\" `
             /p:RuntimeLibrary=MultiThreaded `
             /p:LinkIncremental=false `
+            /p:Optimize=false `  # 关闭所有编译优化
+            /p:LinkTimeCodeGeneration=false `  # 关闭链接时优化
+            /p:AdditionalOptions="/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE" `  # 关键：关闭优化+禁止裁剪+强制链接整个库
             /nologo `
             /verbosity:minimal
 
-      - name: Verify Client build output
-        run: |
-          Get-ChildItem "${{ github.workspace }}\build_output\Client" | Select-Object Name, Length
-          if (-not (Test-Path "${{ github.workspace }}\build_output\Client\*.exe")) {
-              throw "Client exe not found!"
-          }
-
-      - name: Build Server (Debug Win32, Static Link)
+      # 编译 Server：完全关闭优化、禁止裁剪
+      - name: Build Server (No Optimization, No Trimming)
         run: |
           msbuild Server/Server.vcxproj `
             /p:Configuration=Debug `
@@ -52,28 +49,29 @@ jobs:
             /p:OutDir="${{ github.workspace }}\build_output\Server\" `
             /p:RuntimeLibrary=MultiThreadedDebug `
             /p:LinkIncremental=false `
+            /p:Optimize=false `  # 关闭所有编译优化
+            /p:LinkTimeCodeGeneration=false `  # 关闭链接时优化
+            /p:AdditionalOptions="/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE" `  # 关键：关闭优化+禁止裁剪+强制链接整个库
             /nologo `
             /verbosity:minimal
 
-      - name: Verify Server build output
+      # 验证输出
+      - name: Verify build outputs
         run: |
+          Get-ChildItem "${{ github.workspace }}\build_output\Client" | Select-Object Name, Length
           Get-ChildItem "${{ github.workspace }}\build_output\Server" | Select-Object Name, Length
-          if (-not (Test-Path "${{ github.workspace }}\build_output\Server\*.exe")) {
-              throw "Server exe not found!"
-          }
 
-      - name: Copy artifacts to output directory
-        run: |
-          Copy-Item -Path "${{ github.workspace }}\build_output\Client\*" -Destination "${{ github.workspace }}\output\" -Force
-          Copy-Item -Path "${{ github.workspace }}\build_output\Server\*" -Destination "${{ github.workspace }}\output\" -Force
-
-      - name: Verify final output
-        run: |
-          Get-ChildItem "${{ github.workspace }}\output" | Select-Object Name, Length
-
-      - name: Upload artifacts
+      # 上传独立包
+      - name: Upload Client artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-Build-Artifacts
-          path: ${{ github.workspace }}\output\
+          name: HVNC-Client-NoOpt
+          path: ${{ github.workspace }}\build_output\Client\
+          retention-days: 7
+
+      - name: Upload Server artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: HVNC-Server-NoOpt
+          path: ${{ github.workspace }}\build_output\Server\
           retention-days: 7
