@@ -1,4 +1,4 @@
-name: HVNC-1 直接输出到output（保新旧）
+name: HVNC-1 官方标准复制产物
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,29 +6,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: microsoft/setup-msbuild@v2
-      - name: 确保output目录存在（不删旧文件）
-        run: New-Item -Path ${{ github.workspace }}/output -ItemType Directory -Force
-      - name: 编译Client→直接输出到output（带时间戳）
+      
+      # 1. 官方命令：强制编译到临时目录
+      - name: 编译Client（官方强制输出路径）
+        run: msbuild Client/HVNC.vcxproj /p:Configuration=Release /p:Platform=x64 /p:OutDir=${{ github.workspace }}/build_output/Client/ /nologo
+      
+      - name: 编译Server（官方强制输出路径）
+        run: msbuild Server/Server.vcxproj /p:Configuration=Debug /p:Platform=Win32 /p:OutDir=${{ github.workspace }}/build_output/Server/ /nologo
+      
+      # 2. 标准命令：复制到你要的output文件夹
+      - name: 复制产物到output（标准命令）
         run: |
-          $ts = Get-Date -Format 'yyyyMMddHHmmss'
-          msbuild Client/HVNC.vcxproj `
-            /p:Configuration=Release /p:Platform=x64 `
-            /p:OutputPath=${{ github.workspace }}/output/ `
-            /p:TargetName=Client_$ts `
-            /p:LinkIncremental=false
-      - name: 编译Server→直接输出到output（带时间戳）
-        run: |
-          $ts = Get-Date -Format 'yyyyMMddHHmmss'
-          msbuild Server/Server.vcxproj `
-            /p:Configuration=Debug /p:Platform=Win32 `
-            /p:OutputPath=${{ github.workspace }}/output/ `
-            /p:TargetName=Server_$ts `
-            /p:LinkIncremental=false
-      - name: 查看output文件+大小（确认是大文件）
-        run: Get-ChildItem ${{ github.workspace }}/output | Select-Object Name, Length
-      - name: 上传output所有exe
+          New-Item -Path ${{ github.workspace }}/output -ItemType Directory -Force
+          Copy-Item -Path ${{ github.workspace }}/build_output/**/*.exe -Destination ${{ github.workspace }}/output/ -Recurse -Force
+      
+      # 3. 验证文件存在（官方标准步骤）
+      - name: 验证output中的文件
+        run: Get-ChildItem ${{ github.workspace }}/output -Name
+      
+      # 4. 上传产物（官方标准步骤）
+      - name: 上传output文件夹
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-1-output直接生成包
-          path: ${{ github.workspace }}/output/*.exe
-          retention-days: 7
+          name: HVNC-1-标准产物包
+          path: ${{ github.workspace }}/output/
