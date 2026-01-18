@@ -1,4 +1,4 @@
-name: HVNC-1 最终稳定版（新旧都保留）
+name: HVNC-1 直接输出到output（保新旧）
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,29 +6,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: microsoft/setup-msbuild@v2
-      - name: 确保output文件夹存在（不删除任何原有文件）
+      - name: 确保output目录存在（不删旧文件）
         run: New-Item -Path ${{ github.workspace }}/output -ItemType Directory -Force
-      - name: 编译Client
-        run: msbuild Client/HVNC.vcxproj /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
-      - name: 编译Server
-        run: msbuild Server/Server.vcxproj /p:Configuration=Debug /p:Platform=Win32 /p:LinkIncremental=false
-      - name: 【精准复制】只从Client/Server文件夹找exe，自动加时间戳避免覆盖
+      - name: 编译Client→直接输出到output（带时间戳）
         run: |
-          # 只搜Client和Server两个源文件夹，排除临时obj文件夹
-          $exeFiles = Get-ChildItem -Path ./Client, ./Server -Filter *.exe -Recurse -Exclude "**/obj/**/*.exe"
-          
-          foreach ($file in $exeFiles) {
-              # 给本次复制的文件加时间戳，确保新旧都保留
-              $fileName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
-              $ext = [System.IO.Path]::GetExtension($file.Name)
-              $newFileName = "$fileName`_$(Get-Date -Format 'yyyyMMddHHmmss')$ext"
-              Copy-Item -Path $file.FullName -Destination "${{ github.workspace }}/output/$newFileName"
-          }
-      - name: 验证output内容（新旧文件都保留）
-        run: Get-ChildItem ${{ github.workspace }}/output
-      - name: 上传所有exe（含新旧版本）
+          $ts = Get-Date -Format 'yyyyMMddHHmmss'
+          msbuild Client/HVNC.vcxproj `
+            /p:Configuration=Release /p:Platform=x64 `
+            /p:OutputPath=${{ github.workspace }}/output/ `
+            /p:TargetName=Client_$ts `
+            /p:LinkIncremental=false
+      - name: 编译Server→直接输出到output（带时间戳）
+        run: |
+          $ts = Get-Date -Format 'yyyyMMddHHmmss'
+          msbuild Server/Server.vcxproj `
+            /p:Configuration=Debug /p:Platform=Win32 `
+            /p:OutputPath=${{ github.workspace }}/output/ `
+            /p:TargetName=Server_$ts `
+            /p:LinkIncremental=false
+      - name: 查看output文件+大小（确认是大文件）
+        run: Get-ChildItem ${{ github.workspace }}/output | Select-Object Name, Length
+      - name: 上传output所有exe
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-1-最终稳定包
+          name: HVNC-1-output直接生成包
           path: ${{ github.workspace }}/output/*.exe
           retention-days: 7
