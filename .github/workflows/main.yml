@@ -1,44 +1,77 @@
-name: HVNC-1 静态链接生成完整大exe
-on: [push, workflow_dispatch]
+# 工作流名称：清晰描述用途（官方推荐）
+name: Build HVNC Project (Official Standard)
+
+# 触发条件：官方标准写法，支持推送和手动触发
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+# 作业定义：官方标准结构
 jobs:
   build:
+    # 运行环境：官方推荐使用最新稳定版 Windows
     runs-on: windows-latest
+    # 失败立即终止（官方最佳实践）
+    continue-on-error: false
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: microsoft/setup-msbuild@v2
+      # 1. 检出代码：官方维护的动作，标准写法
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-      # 1. 强制静态链接编译，把所有依赖打包进exe
-      - name: 编译Client（静态链接 Release x64）
+      # 2. 安装 MSBuild：微软官方维护的动作，标准写法
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+        with:
+          msbuild-architecture: x64
+
+      # 3. 创建临时构建目录（官方推荐：隔离编译产物）
+      - name: Create build directories
         run: |
-          msbuild Client/HVNC.vcxproj ^
-            /p:Configuration=Release /p:Platform=x64 ^
-            /p:OutDir=${{ github.workspace }}/build_output/Client/ ^
-            /p:RuntimeLibrary=MultiThreaded ^
-            /p:LinkIncremental=false ^
-            /nologo
+          New-Item -Path "${{ github.workspace }}\build_output" -ItemType Directory -Force
+          New-Item -Path "${{ github.workspace }}\output" -ItemType Directory -Force
 
-      - name: 编译Server（静态链接 Debug Win32）
+      # 4. 编译 Client 项目（官方标准 MSBuild 命令格式）
+      - name: Build Client (Release x64, Static Link)
         run: |
-          msbuild Server/Server.vcxproj ^
-            /p:Configuration=Debug /p:Platform=Win32 ^
-            /p:OutDir=${{ github.workspace }}/build_output/Server/ ^
-            /p:RuntimeLibrary=MultiThreadedDebug ^
-            /p:LinkIncremental=false ^
-            /nologo
+          msbuild Client/HVNC.vcxproj `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:OutDir="${{ github.workspace }}\build_output\Client\" `
+            /p:RuntimeLibrary=MultiThreaded `
+            /p:LinkIncremental=false `
+            /nologo `
+            /verbosity:minimal
 
-      # 2. 复制所有输出文件（包括exe、dll、pdb等）
-      - name: 复制所有产物到output
+      # 5. 编译 Server 项目（官方标准 MSBuild 命令格式）
+      - name: Build Server (Debug Win32, Static Link)
         run: |
-          New-Item -Path ${{ github.workspace }}/output -ItemType Directory -Force
-          Copy-Item -Path ${{ github.workspace }}/build_output/**/* -Destination ${{ github.workspace }}/output/ -Recurse -Force
+          msbuild Server/Server.vcxproj `
+            /p:Configuration=Debug `
+            /p:Platform=Win32 `
+            /p:OutDir="${{ github.workspace }}\build_output\Server\" `
+            /p:RuntimeLibrary=MultiThreadedDebug `
+            /p:LinkIncremental=false `
+            /nologo `
+            /verbosity:minimal
 
-      # 3. 验证文件大小和数量
-      - name: 验证output中的文件（含大小）
-        run: Get-ChildItem ${{ github.workspace }}/output | Select-Object Name, Length
+      # 6. 复制产物到输出目录（官方标准 PowerShell 命令）
+      - name: Copy artifacts to output directory
+        run: |
+          Copy-Item -Path "${{ github.workspace }}\build_output\**\*" -Destination "${{ github.workspace }}\output\" -Recurse -Force
 
-      # 4. 上传完整产物
-      - name: 上传output文件夹
+      # 7. 验证产物（官方推荐：确保文件生成后再上传）
+      - name: Verify artifacts
+        run: |
+          Get-ChildItem "${{ github.workspace }}\output" | Select-Object Name, Length
+
+      # 8. 上传产物（官方维护的动作，标准写法）
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-1-完整静态链接包
-          path: ${{ github.workspace }}/output/
+          name: HVNC-Build-Artifacts
+          path: ${{ github.workspace }}\output\
+          retention-days: 7
