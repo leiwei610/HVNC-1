@@ -1,4 +1,4 @@
-name: Build HVNC Project (No Optimization, No Trimming)
+name: Build HVNC Project (No Optimization, Static Link, Official Standard)
 on:
   push:
     branches: [ "main" ]
@@ -25,8 +25,7 @@ jobs:
           New-Item -Path "${{ github.workspace }}\build_output\Client" -ItemType Directory -Force
           New-Item -Path "${{ github.workspace }}\build_output\Server" -ItemType Directory -Force
 
-      # 编译 Client：完全关闭优化、禁止裁剪
-      - name: Build Client (No Optimization, No Trimming)
+      - name: Build Client (No Optimization, Static Link)
         run: |
           msbuild Client/HVNC.vcxproj `
             /p:Configuration=Release `
@@ -34,14 +33,13 @@ jobs:
             /p:OutDir="${{ github.workspace }}\build_output\Client\" `
             /p:RuntimeLibrary=MultiThreaded `
             /p:LinkIncremental=false `
-            /p:Optimize=false `  # 关闭所有编译优化
-            /p:LinkTimeCodeGeneration=false `  # 关闭链接时优化
-            /p:AdditionalOptions="/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE" `  # 关键：关闭优化+禁止裁剪+强制链接整个库
+            /p:Optimize=false `
+            /p:LinkTimeCodeGeneration=false `
+            /p:AdditionalLinkerOptions="/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE" `
             /nologo `
             /verbosity:minimal
 
-      # 编译 Server：完全关闭优化、禁止裁剪
-      - name: Build Server (No Optimization, No Trimming)
+      - name: Build Server (No Optimization, Static Link)
         run: |
           msbuild Server/Server.vcxproj `
             /p:Configuration=Debug `
@@ -49,29 +47,27 @@ jobs:
             /p:OutDir="${{ github.workspace }}\build_output\Server\" `
             /p:RuntimeLibrary=MultiThreadedDebug `
             /p:LinkIncremental=false `
-            /p:Optimize=false `  # 关闭所有编译优化
-            /p:LinkTimeCodeGeneration=false `  # 关闭链接时优化
-            /p:AdditionalOptions="/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE" `  # 关键：关闭优化+禁止裁剪+强制链接整个库
+            /p:Optimize=false `
+            /p:LinkTimeCodeGeneration=false `
+            /p:AdditionalLinkerOptions="/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE" `
             /nologo `
             /verbosity:minimal
 
-      # 验证输出
       - name: Verify build outputs
         run: |
           Get-ChildItem "${{ github.workspace }}\build_output\Client" | Select-Object Name, Length
           Get-ChildItem "${{ github.workspace }}\build_output\Server" | Select-Object Name, Length
 
-      # 上传独立包
       - name: Upload Client artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-Client-NoOpt
+          name: HVNC-Client-NoOpt-Static
           path: ${{ github.workspace }}\build_output\Client\
           retention-days: 7
 
       - name: Upload Server artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-Server-NoOpt
+          name: HVNC-Server-NoOpt-Static
           path: ${{ github.workspace }}\build_output\Server\
           retention-days: 7
