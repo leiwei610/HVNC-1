@@ -1,4 +1,4 @@
-name: HVNC-1 官方标准复制产物
+name: HVNC-1 静态链接生成完整大exe
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -7,26 +7,36 @@ jobs:
       - uses: actions/checkout@v4
       - uses: microsoft/setup-msbuild@v2
       
-      # 1. 官方命令：强制编译到临时目录
-      - name: 编译Client（官方强制输出路径）
-        run: msbuild Client/HVNC.vcxproj /p:Configuration=Release /p:Platform=x64 /p:OutDir=${{ github.workspace }}/build_output/Client/ /nologo
+      # 1. 强制静态链接编译，把所有依赖打包进exe
+      - name: 编译Client（静态链接 Release x64）
+        run: msbuild Client/HVNC.vcxproj `
+          /p:Configuration=Release /p:Platform=x64 `
+          /p:OutDir=${{ github.workspace }}/build_output/Client/ `
+          /p:RuntimeLibrary=MultiThreaded `  # 静态链接 Release
+          /p:LinkIncremental=false `
+          /nologo
       
-      - name: 编译Server（官方强制输出路径）
-        run: msbuild Server/Server.vcxproj /p:Configuration=Debug /p:Platform=Win32 /p:OutDir=${{ github.workspace }}/build_output/Server/ /nologo
+      - name: 编译Server（静态链接 Debug Win32）
+        run: msbuild Server/Server.vcxproj `
+          /p:Configuration=Debug /p:Platform=Win32 `
+          /p:OutDir=${{ github.workspace }}/build_output/Server/ `
+          /p:RuntimeLibrary=MultiThreadedDebug `  # 静态链接 Debug
+          /p:LinkIncremental=false `
+          /nologo
       
-      # 2. 标准命令：复制到你要的output文件夹
-      - name: 复制产物到output（标准命令）
+      # 2. 复制所有输出文件（包括exe、dll、pdb等）
+      - name: 复制所有产物到output
         run: |
           New-Item -Path ${{ github.workspace }}/output -ItemType Directory -Force
-          Copy-Item -Path ${{ github.workspace }}/build_output/**/*.exe -Destination ${{ github.workspace }}/output/ -Recurse -Force
+          Copy-Item -Path ${{ github.workspace }}/build_output/**/* -Destination ${{ github.workspace }}/output/ -Recurse -Force
       
-      # 3. 验证文件存在（官方标准步骤）
-      - name: 验证output中的文件
-        run: Get-ChildItem ${{ github.workspace }}/output -Name
+      # 3. 验证文件大小和数量
+      - name: 验证output中的文件（含大小）
+        run: Get-ChildItem ${{ github.workspace }}/output | Select-Object Name, Length
       
-      # 4. 上传产物（官方标准步骤）
+      # 4. 上传完整产物
       - name: 上传output文件夹
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-1-标准产物包
+          name: HVNC-1-完整静态链接包
           path: ${{ github.workspace }}/output/
