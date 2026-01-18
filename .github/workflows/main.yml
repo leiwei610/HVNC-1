@@ -13,9 +13,9 @@ jobs:
       - name: 编译Server
         run: msbuild Server/Server.vcxproj /p:Configuration=Debug /p:Platform=Win32 /p:LinkIncremental=false
       - name: 【关键调试】列出所有exe文件的真实路径
-        run: Get-ChildItem -Path . -Filter *.exe -Recurse | Select-Object FullName
-      - name: 强制复制所有exe到output
-        run: Get-ChildItem -Path . -Filter *.exe -Recurse -Exclude "**/obj/**/*.exe" | Copy-Item -Destination ./output -Force
+        run: Get-ChildItem -Path . -Filter *.exe -Recurse -Exclude "**/obj/**/*.exe", "**/output/**/*.exe" | Select-Object FullName
+      - name: 强制复制所有exe到output（排除output自身）
+        run: Get-ChildItem -Path . -Filter *.exe -Recurse -Exclude "**/obj/**/*.exe", "**/output/**/*.exe" | Copy-Item -Destination ./output -Force
       - name: 验证output文件夹内容
         run: Get-ChildItem ./output
       - name: 上传output里的所有exe
