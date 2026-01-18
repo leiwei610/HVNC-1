@@ -1,40 +1,31 @@
-# 工作流名称：清晰描述用途（官方推荐）
 name: Build HVNC Project (Official Standard)
-
-# 触发条件：官方标准写法，支持推送和手动触发
 on:
   push:
     branches: [ "main" ]
   workflow_dispatch:
 
-# 作业定义：官方标准结构
 jobs:
   build:
-    # 运行环境：官方推荐使用最新稳定版 Windows
     runs-on: windows-latest
-    # 失败立即终止（官方最佳实践）
     continue-on-error: false
 
     steps:
-      # 1. 检出代码：官方维护的动作，标准写法
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      # 2. 安装 MSBuild：微软官方维护的动作，标准写法
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
         with:
           msbuild-architecture: x64
 
-      # 3. 创建临时构建目录（官方推荐：隔离编译产物）
       - name: Create build directories
         run: |
-          New-Item -Path "${{ github.workspace }}\build_output" -ItemType Directory -Force
+          New-Item -Path "${{ github.workspace }}\build_output\Client" -ItemType Directory -Force
+          New-Item -Path "${{ github.workspace }}\build_output\Server" -ItemType Directory -Force
           New-Item -Path "${{ github.workspace }}\output" -ItemType Directory -Force
 
-      # 4. 编译 Client 项目（官方标准 MSBuild 命令格式）
       - name: Build Client (Release x64, Static Link)
         run: |
           msbuild Client/HVNC.vcxproj `
@@ -46,7 +37,13 @@ jobs:
             /nologo `
             /verbosity:minimal
 
-      # 5. 编译 Server 项目（官方标准 MSBuild 命令格式）
+      - name: Verify Client build output
+        run: |
+          Get-ChildItem "${{ github.workspace }}\build_output\Client" | Select-Object Name, Length
+          if (-not (Test-Path "${{ github.workspace }}\build_output\Client\*.exe")) {
+              throw "Client exe not found!"
+          }
+
       - name: Build Server (Debug Win32, Static Link)
         run: |
           msbuild Server/Server.vcxproj `
@@ -58,17 +55,22 @@ jobs:
             /nologo `
             /verbosity:minimal
 
-      # 6. 复制产物到输出目录（官方标准 PowerShell 命令）
+      - name: Verify Server build output
+        run: |
+          Get-ChildItem "${{ github.workspace }}\build_output\Server" | Select-Object Name, Length
+          if (-not (Test-Path "${{ github.workspace }}\build_output\Server\*.exe")) {
+              throw "Server exe not found!"
+          }
+
       - name: Copy artifacts to output directory
         run: |
-          Copy-Item -Path "${{ github.workspace }}\build_output\**\*" -Destination "${{ github.workspace }}\output\" -Recurse -Force
+          Copy-Item -Path "${{ github.workspace }}\build_output\Client\*" -Destination "${{ github.workspace }}\output\" -Force
+          Copy-Item -Path "${{ github.workspace }}\build_output\Server\*" -Destination "${{ github.workspace }}\output\" -Force
 
-      # 7. 验证产物（官方推荐：确保文件生成后再上传）
-      - name: Verify artifacts
+      - name: Verify final output
         run: |
           Get-ChildItem "${{ github.workspace }}\output" | Select-Object Name, Length
 
-      # 8. 上传产物（官方维护的动作，标准写法）
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
