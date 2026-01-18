@@ -1,4 +1,4 @@
-name: HVNC-1 直接编译到output
+name: HVNC-1 精准定位输出到output
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -8,15 +8,19 @@ jobs:
       - uses: microsoft/setup-msbuild@v2
       - name: 创建根目录output文件夹
         run: New-Item ./output -ItemType Directory -Force
-      - name: 编译Client（直接输出到output）
-        run: msbuild Client/HVNC.vcxproj /p:Configuration=Release /p:Platform=x64 /p:OutputPath=../../output/ /p:LinkIncremental=false
-      - name: 编译Server（直接输出到output）
-        run: msbuild Server/Server.vcxproj /p:Configuration=Debug /p:Platform=Win32 /p:OutputPath=../../output/ /p:LinkIncremental=false
+      - name: 编译Client
+        run: msbuild Client/HVNC.vcxproj /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
+      - name: 编译Server
+        run: msbuild Server/Server.vcxproj /p:Configuration=Debug /p:Platform=Win32 /p:LinkIncremental=false
+      - name: 【关键调试】列出所有exe文件的真实路径
+        run: Get-ChildItem -Path . -Filter *.exe -Recurse | Select-Object FullName
+      - name: 强制复制所有exe到output
+        run: Get-ChildItem -Path . -Filter *.exe -Recurse -Exclude "**/obj/**/*.exe" | Copy-Item -Destination ./output -Force
       - name: 验证output文件夹内容
         run: Get-ChildItem ./output
       - name: 上传output里的所有exe
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-1-output-直接编译包
+          name: HVNC-1-output-精准定位包
           path: output/*.exe
           retention-days: 7
