@@ -1,4 +1,4 @@
-name: Build HVNC Project (No Console, No PDB, No Optimization)
+name: Build HVNC Project (Final Stable)
 on:
   push:
     branches: [ "main" ]
@@ -37,12 +37,12 @@ jobs:
             /p:Optimize=false `
             /p:LinkTimeCodeGeneration=false `
             /p:GenerateDebugInformation=false `
-            /p:SubSystem=Windows `  # 关键：隐藏控制台窗口
-            /p:AdditionalLinkerOptions="/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE" `
+            /p:SubSystem=Windows `
+            /p:AdditionalLinkerOptions="'/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE'" `
             /nologo `
             /verbosity:minimal
 
-      # 主控端（Server）：保留控制台（方便调试）、无PDB、无优化、静态链接
+      # 主控端（Server）：保留控制台、无PDB、无优化、静态链接
       - name: Build Server (No PDB, No Optimization)
         run: |
           msbuild Server/Server.vcxproj `
@@ -54,7 +54,7 @@ jobs:
             /p:Optimize=false `
             /p:LinkTimeCodeGeneration=false `
             /p:GenerateDebugInformation=false `
-            /p:AdditionalLinkerOptions="/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE" `
+            /p:AdditionalLinkerOptions="'/Od /OPT:NOREF /OPT:NOICF /WHOLEARCHIVE'" `
             /nologo `
             /verbosity:minimal
 
