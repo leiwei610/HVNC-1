@@ -1,4 +1,4 @@
-name: HVNC-1 最终编译
+name: HVNC-1 精准编译
 on:
   push:
     branches: [ main ]
@@ -15,10 +15,10 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: 编译被控端（Client项目）
-        run: msbuild "Client/HVNC.vcxproj" /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
+        run: msbuild "Client/Client.vcxproj" /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
 
       - name: 编译主控端（Server项目）
-        run: msbuild "Server/HVNC.vcxproj" /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
+        run: msbuild "Server/Server.vcxproj" /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
 
       - name: 上传编译结果
         uses: actions/upload-artifact@v4
