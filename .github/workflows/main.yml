@@ -1,4 +1,4 @@
-name: HVNC-1 新旧exe都保留
+name: HVNC-1 最终稳定版（新旧都保留）
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -8,36 +8,27 @@ jobs:
       - uses: microsoft/setup-msbuild@v2
       - name: 确保output文件夹存在（不删除任何原有文件）
         run: New-Item -Path ${{ github.workspace }}/output -ItemType Directory -Force
-      - name: 编译Client并生成编译日志
-        run: msbuild Client/HVNC.vcxproj /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false /bl:client.binlog
-      - name: 编译Server并生成编译日志
-        run: msbuild Server/Server.vcxproj /p:Configuration=Debug /p:Platform=Win32 /p:LinkIncremental=false /bl:server.binlog
-      - name: 提取本次exe并以时间戳命名，新旧都保留
+      - name: 编译Client
+        run: msbuild Client/HVNC.vcxproj /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
+      - name: 编译Server
+        run: msbuild Server/Server.vcxproj /p:Configuration=Debug /p:Platform=Win32 /p:LinkIncremental=false
+      - name: 【精准复制】只从Client/Server文件夹找exe，自动加时间戳避免覆盖
         run: |
-          # 解析本次编译生成的exe路径
-          $clientExe = Select-Xml -Path client.binlog -XPath "//Output[@Path='*.exe']" | Select-Object -ExpandProperty Node | Select-Object -ExpandProperty Path -First 1
-          $serverExe = Select-Xml -Path server.binlog -XPath "//Output[@Path='*.exe']" | Select-Object -ExpandProperty Node | Select-Object -ExpandProperty Path -First 1
+          # 只搜Client和Server两个源文件夹，排除临时obj文件夹
+          $exeFiles = Get-ChildItem -Path ./Client, ./Server -Filter *.exe -Recurse -Exclude "**/obj/**/*.exe"
           
-          # 处理Client.exe：添加时间戳后缀，避免覆盖旧文件
-          if ($clientExe) {
-              $fileName = [System.IO.Path]::GetFileNameWithoutExtension($clientExe)
-              $ext = [System.IO.Path]::GetExtension($clientExe)
+          foreach ($file in $exeFiles) {
+              # 给本次复制的文件加时间戳，确保新旧都保留
+              $fileName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+              $ext = [System.IO.Path]::GetExtension($file.Name)
               $newFileName = "$fileName`_$(Get-Date -Format 'yyyyMMddHHmmss')$ext"
-              Copy-Item -Path $clientExe -Destination "${{ github.workspace }}/output/$newFileName"
-          }
-          
-          # 处理Server.exe：添加时间戳后缀，避免覆盖旧文件
-          if ($serverExe) {
-              $fileName = [System.IO.Path]::GetFileNameWithoutExtension($serverExe)
-              $ext = [System.IO.Path]::GetExtension($serverExe)
-              $newFileName = "$fileName`_$(Get-Date -Format 'yyyyMMddHHmmss')$ext"
-              Copy-Item -Path $serverExe -Destination "${{ github.workspace }}/output/$newFileName"
+              Copy-Item -Path $file.FullName -Destination "${{ github.workspace }}/output/$newFileName"
           }
       - name: 验证output内容（新旧文件都保留）
         run: Get-ChildItem ${{ github.workspace }}/output
       - name: 上传所有exe（含新旧版本）
         uses: actions/upload-artifact@v4
         with:
-          name: HVNC-1-新旧exe都保留包
+          name: HVNC-1-最终稳定包
           path: ${{ github.workspace }}/output/*.exe
           retention-days: 7
