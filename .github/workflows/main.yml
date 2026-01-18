@@ -1,4 +1,4 @@
-name: HVNC-1 精准编译
+name: HVNC-1 精准修正编译
 on:
   push:
     branches: [ main ]
@@ -14,10 +14,10 @@ jobs:
       - name: 设置Visual Studio编译环境
         uses: microsoft/setup-msbuild@v2
 
-      - name: 编译被控端（Client项目）
-        run: msbuild "Client/Client.vcxproj" /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
+      - name: 编译被控端（Client项目，保留之前成功的路径）
+        run: msbuild "Client/HVNC.vcxproj" /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
 
-      - name: 编译主控端（Server项目）
+      - name: 编译主控端（Server项目，修正为正确路径）
         run: msbuild "Server/Server.vcxproj" /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
 
       - name: 上传编译结果
