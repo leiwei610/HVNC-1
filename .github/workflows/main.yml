@@ -1,15 +1,4 @@
-name: HVNC-1 一键编译
-on:
-  push:
-    branches: [ main ]  # 推送到main分支时自动触发
-  workflow_dispatch:    # 支持手动触发（推荐你用这个，改完IP/端口后手动运行）
-
-jobs:
-  build:
-    runs-on: windows-latest
-    steps:name: HVNC-1 正确编译
-on:
-  push:name: HVNC-1 正确编译
+name: HVNC-1 最终编译
 on:
   push:
     branches: [ main ]
@@ -26,66 +15,16 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: 编译被控端（Client项目）
-        run: msbuild HVNC.sln /t:Client/HVNC.vcxproj /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
+        run: msbuild "Client/HVNC.vcxproj" /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
 
       - name: 编译主控端（Server项目）
-        run: msbuild HVNC.sln /t:Server/HVNC.vcxproj /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
+        run: msbuild "Server/HVNC.vcxproj" /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
 
       - name: 上传编译结果
         uses: actions/upload-artifact@v4
         with:
           name: HVNC-1编译包
           path: |
-            x64/Release/*.exe
+            Client/x64/Release/*.exe
+            Server/x64/Release/*.exe
           retention-days: 7
-    branches: [ main ]
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: windows-latest
-    steps:
-      - name: 拉取源码
-        uses: actions/checkout@v4
-
-      - name: 设置Visual Studio编译环境
-        uses: microsoft/setup-msbuild@v2
-
-      - name: 编译被控端（Client项目）
-        run: msbuild HVNC.sln /t:Client/HVNC.vcxproj /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
-
-      - name: 编译主控端（Server项目）
-        run: msbuild HVNC.sln /t:Server/HVNC.vcxproj /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
-
-      - name: 上传编译结果
-        uses: actions/upload-artifact@v4
-        with:
-          name: HVNC-1编译包
-          path: |
-            x64/Release/*.exe
-          retention-days: 7
-      # 1. 拉取仓库代码
-      - name: 拉取源码
-        uses: actions/checkout@v4
-
-      # 2. 配置MSBuild编译工具
-      - name: 设置Visual Studio编译环境
-        uses: microsoft/setup-msbuild@v2
-
-      # 3. 编译被控端（Client）
-      - name: 编译 Client (Release/x64)
-        run: msbuild HVNC.sln /t:Client /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
-
-      # 4. 编译主控端（Server）
-      - name: 编译 Server (Release/x64)
-        run: msbuild HVNC.sln /t:Server /p:Configuration=Release /p:Platform=x64 /p:LinkIncremental=false
-
-      # 5. 上传编译结果（可直接下载）
-      - name: 上传编译包
-        uses: actions/upload-artifact@v4
-        with:
-          name: HVNC-1编译结果
-          path: |
-            x64/Release/Client.exe
-            x64/Release/Server.exe
-          retention-days: 7  # 保留7天，避免占用空间
